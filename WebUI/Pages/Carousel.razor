@@ -1,0 +1,148 @@
+﻿@page "/Carousel/{pageContainerId:int?}"
+@inject DataManager dm
+
+@if (_pageContainer != null)
+{
+
+    <div style=@FullScreen()>
+        <MudCarousel ItemsSource="@_pageContainer.contentCarouselsViewModels"
+                     Style="height:100%;"
+                     ShowArrows="@ShowAdmin"
+                     ShowDelimiters="@ShowAdmin"
+                     AutoCycle="@_onCircle"
+                     AutoCycleTime="new TimeSpan(0,0, 5)"
+                     @ref="_carousel">
+            <ItemTemplate>
+                @if (context.Content != null)
+                {
+                    <div align="center">
+                        <img src="data:image/bmp;base64, @context.Content" />
+                    </div>
+                }
+            </ItemTemplate>
+        </MudCarousel>
+        <br />
+    </div>
+
+    @if (ShowAdmin)
+    {
+        <InputFile id="fileInput" OnChange="UploadFiles" hidden multiple />
+        <MudButton HtmlTag="label"
+                   Class="ma-2"
+                   Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   for="fileInput">
+            Загрузить картинку
+        </MudButton>
+        <MudButton Class="ma-2"
+                   Variant="Variant.Filled"
+                   Color="Color.Error"
+                   OnClick="@(async () => await DeleteAsync(_carousel.SelectedIndex))">
+            Удалить картинку
+        </MudButton>
+
+
+        <MudSwitch @bind-Checked="@_onCircle" Color="Color.Primary">Auto Cycle</MudSwitch>
+        <MudTextField @bind-Value="_pageContainer.Name" Label="Имя карусели" Variant="Variant.Text" />
+        <MudTextField @bind-Value="_pageContainer.Id" Label="Имя карусели" Variant="Variant.Text" />
+        <MudButton Class="ma-2"
+                   Variant="Variant.Filled"
+                   Color="Color.Secondary"
+                   OnClick="@SaveCahngesCarousel">
+            Сохранить изменения
+        </MudButton>
+    }
+
+}
+
+@code{
+    [CascadingParameter]
+    protected bool ShowAdmin { get; set; }
+
+    [Parameter]
+    public int pageContainerId { get; set; }
+    private PageContainerViewModel _pageContainer;
+
+    private MudCarousel<ContentCarouselsViewModel> _carousel;
+
+    private bool _showAdmin = true;
+    private bool _onCircle = true;
+
+    protected override void OnParametersSet()
+    {
+
+        _pageContainer = dm.PageContainerManager.GetViewModelsById(pageContainerId).Data;
+        base.OnParametersSet();
+    }
+
+    private string FullScreen()
+    {
+        if (ShowAdmin)
+        {
+            return "height: 50%;";
+        }
+        return " position: fixed; top: 0; left: 0; width: 100%; height: 100%;";
+    }
+
+    private async Task DeleteAsync(int index)
+    {
+        if (_pageContainer.contentCarouselsViewModels.Any())
+        {
+            var temp = _pageContainer.contentCarouselsViewModels[index];
+            await dm.ContentCarouselManager.DeleteAsync(temp.Id);
+            _pageContainer.contentCarouselsViewModels.RemoveAt(index);
+            await Task.Delay(1);
+            _carousel.MoveTo(System.Math.Max(System.Math.Min(index, _pageContainer.contentCarouselsViewModels.Count - 1), 0));
+        }
+    }
+
+    private async Task SaveCahngesCarousel()
+    {
+        await dm.PageContainerManager.UpdateAsync(_pageContainer);
+        _pageContainer = dm.PageContainerManager.GetViewModelsById(pageContainerId).Data;
+        //dm.ContentCarouselManager
+        StateHasChanged();
+    }
+
+    private async Task UploadFiles(InputFileChangeEventArgs e)
+    {
+        await LoadFiles(e);
+        //foreach (var image in images)
+        //{
+        //    _currentCarousel.NameImages.Add(image);
+        //}
+        //dm.UpdateCarousel(_currentCarousel);
+
+        StateHasChanged();
+    }
+
+    public async Task LoadFiles(InputFileChangeEventArgs e)
+    {
+        var model = new ContentCarouselCreate()
+        {
+            ContentFile = new List<IBrowserFile>(),
+            PageContainerId = pageContainerId
+        };
+        foreach (var file in e.GetMultipleFiles())
+        {
+            model.ContentFile.Add(file);
+        }
+
+        if (model.ContentFile.Any())
+        {
+
+            var result = await dm.ContentCarouselManager.CreateAsync(model);
+
+            //if (result.Type == NotificationType.Warn)
+            //    Snackbar.Add(result.Text, Severity.Warning);
+            //else if (result.Type == NotificationType.Error || result.Type == NotificationType.Info)
+            //    Snackbar.Add(result.Text, Severity.Error);
+            //else
+            //{
+            //    Model = await dm.EmployeesManager.GetForUpdateAsync(id);
+            //    Snackbar.Add("Фото добавлено", Severity.Success);
+            //}
+
+        }
+    }
+}

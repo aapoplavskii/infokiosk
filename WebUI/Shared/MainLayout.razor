@@ -1,0 +1,36 @@
+﻿@inherits LayoutComponentBase
+
+    <MudThemeProvider />
+    <MudDialogProvider />
+    <MudSnackbarProvider />
+
+    <div class="page">
+        @if (ShowAdmin)
+        {
+            <div class="sidebar">
+
+                <NavMenu />
+
+            </div>
+        }
+
+        <div class="main">
+            <div class="top-row px-4">
+                <MudButton OnClick="ShowHidePanel">Админ </MudButton>
+            </div>
+            <CascadingValue Value="ShowAdmin">
+                <div style="height:100%; width:100%;">
+                    @Body
+                </div>
+            </CascadingValue>
+</div>
+    </div>
+
+@code{
+    public bool ShowAdmin { get; set; } = true;
+
+    public void ShowHidePanel()
+    {
+        ShowAdmin = !ShowAdmin;
+    }
+}

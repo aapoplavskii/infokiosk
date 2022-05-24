@@ -1,0 +1,108 @@
+﻿<div class="top-row pl-4 navbar navbar-dark">
+    <a class="navbar-brand" href="">WebUI</a>
+</div>
+
+@inject DataManager dm
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<MudPaper Width="250px" Class="py-3" Square="true">
+    <MudNavMenu>
+        <MudText Typo="Typo.h6" Class="px-4">Карусель</MudText>
+        <MudDivider Class="my-2" />
+        @foreach (var item in _pageContainerList)
+        {
+            <MudNavLink Href=@GetLinkPage(item)>@item.Name</MudNavLink>
+        }
+        <MudButton OnClick="() => Create(new PageContainerViewModel())">Добавить страницу</MudButton>
+    </MudNavMenu>
+</MudPaper>
+
+@code {
+    private List<PageContainerViewModel> _pageContainerList;
+
+    NotificationViewModelGeneric<PageContainerViewModel> result;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _pageContainerList = new List<PageContainerViewModel>();
+        _pageContainerList = await GetViewModels();
+        await base.OnInitializedAsync();
+    }
+
+    private string GetLinkPage(PageContainerViewModel pageContainerViewModel)
+    {
+        return $"Carousel/{pageContainerViewModel.Id}";
+    }
+
+    private async Task Create(PageContainerViewModel entity)
+    {
+        var resultDialog = await ShowDialog(entity);
+
+        if (!resultDialog.Cancelled)
+        {
+            result = await dm.PageContainerManager.CreateAsync((PageContainerViewModel)resultDialog.Data);
+            if (await CheckResultOnError("создан"))
+            {
+                await Create(entity);
+            }
+        }
+    }
+
+    private async Task Update(PageContainerViewModel entity)
+    {
+        var resultDialog = await ShowDialog(entity);
+
+        if (!resultDialog.Cancelled)
+        {
+            result = await dm.PageContainerManager.UpdateAsync((PageContainerViewModel)resultDialog.Data);
+            if (await CheckResultOnError("изменен"))
+            {
+                await Update(entity);
+            }
+        }
+    }
+
+    private async Task<DialogResult> ShowDialog(PageContainerViewModel entity)
+    {
+        var parameters = new DialogParameters { ["Model"] = entity };
+        var dialog = DialogService.Show<PageContainerDialogComponent>($"Создать", parameters);
+        return await dialog.Result;
+    }
+
+    private async Task Delete(PageContainerViewModel entity)
+    {
+        var dialog = DialogService.Show<ConfirmDeleteDiaologAdminComponent>($"Вы точно хотите удалить {entity.Name}");
+        var resultDialog = await dialog.Result;
+
+        if (!resultDialog.Cancelled)
+        {
+            result = await dm.PageContainerManager.DeleteAsync(entity.Id);
+            await CheckResultOnError("удален");
+        }
+    }
+
+    private async Task<bool> CheckResultOnError(string titleSnackbar)
+    {
+        if (result.Type == NotificationType.Success)
+        {
+            Snackbar.Add($"{titleSnackbar}", Severity.Success);
+            _pageContainerList = await GetViewModels();
+            return false;
+        }
+        Snackbar.Add($"Не {titleSnackbar} {result.Text}", Severity.Error);
+        return true;
+    }
+
+    private async Task<List<PageContainerViewModel>> GetViewModels()
+    {
+        var getResult = await dm.PageContainerManager.GetListViewModelsAsync();
+        result = new NotificationViewModelGeneric<PageContainerViewModel>(getResult);
+        if (getResult.Type == NotificationType.Success)
+        {
+            return getResult.Data;
+        }
+        return _pageContainerList;
+    }
+
+}

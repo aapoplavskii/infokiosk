@@ -1,0 +1,40 @@
+﻿<MudDialog>
+    <DialogContent>
+        <MudForm Model="@Model" @ref="@form">
+            <MudTextField @bind-Value="Model.Name"
+                          Label="Название страници"/>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Color="Color.Info" OnClick="Confirm">Подтевердить</MudButton>
+        <MudButton OnClick="Cancel">Отмена</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+
+    [Parameter] public PageContainerViewModel Model { get; set; }
+
+    MudForm form;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private void Confirm()
+    {
+        form.Validate();
+
+        if (form.IsValid)
+        {
+            MudDialog.Close(DialogResult.Ok(Model));
+        }
+    }
+}
